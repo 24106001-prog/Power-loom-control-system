@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Smart Powerloom Automation Dashboard</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:#eef3f8;color:#172033}
+.header{background:#0b2d4d;color:#fff;padding:18px 28px;display:flex;justify-content:space-between;align-items:center;gap:20px;box-shadow:0 4px 16px #0002}
+.header h1{margin:0;font-size:24px}.header p{margin:5px 0 0;opacity:.8;font-size:13px}
+.conn{display:flex;align-items:center;gap:8px;font-size:13px}.dot{width:11px;height:11px;border-radius:50%;background:#20c878}
+.container{max-width:1500px;margin:auto;padding:24px}.section{margin:24px 0 14px;color:#0b2d4d;font-size:19px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.card{background:#fff;border-radius:15px;padding:19px;box-shadow:0 5px 18px #00000012}
+.title{font-size:13px;color:#667085;margin-bottom:9px}.value{font-size:29px;font-weight:700;color:#0b2d4d}.unit{font-size:13px;color:#667085;font-weight:400}
+.main{display:grid;grid-template-columns:2fr 1fr;gap:18px}.controls{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+button{border:0;border-radius:9px;padding:12px;cursor:pointer;font-weight:700;font-size:13px;transition:.15s}
+button:hover{filter:brightness(.94);transform:translateY(-1px)}button:active{transform:translateY(0)}
+.start{background:#18a96b;color:#fff}.stop{background:#dc4b4b;color:#fff}.resume{background:#1976d2;color:#fff}
+.pick{background:#7546c9;color:#fff}.danger{background:#991b1b;color:#fff}.warn{background:#e99b00;color:#fff}.gray{background:#667085;color:#fff}
+.status{text-align:center;padding:20px;border-radius:12px;background:#edfff6;margin-bottom:16px}.status.stopbg{background:#fff0f0}.status.warnbg{background:#fff8e7}
+.icon{font-size:45px}.status h2{margin:6px 0}.status p{margin:0;color:#667085}
+.formrow{display:grid;grid-template-columns:1fr 1fr;gap:14px}label{font-size:13px;color:#667085}input,select{width:100%;padding:11px;margin-top:6px;border:1px solid #d4dce5;border-radius:8px;font-size:14px}
+.progress{height:12px;background:#e7edf3;border-radius:20px;overflow:hidden}.bar{height:100%;width:0;background:#1976d2;transition:.3s}.bar.warnbar{background:#e99b00}.bar.dangerbar{background:#dc4b4b}
+.keydisplay{background:#111827;color:#54e58b;padding:13px;border-radius:8px;text-align:right;font:700 24px Consolas,monospace;min-height:50px}.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:9px}.keypad button{background:#edf2f7;color:#172033;padding:14px}.keypad .enter{grid-column:span 3;background:#1976d2;color:#fff}.keypad .clear{background:#dc4b4b;color:#fff}
+.ind{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #edf0f3;font-size:13px}.light{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px;background:#18b86b}.light.red{background:#dc4b4b}.light.orange{background:#e99b00}
+.alert{padding:12px;margin:8px 0;border-radius:9px;border-left:5px solid #18a96b;background:#edfff6;font-size:13px}.alert.warning{border-left-color:#e99b00;background:#fff8e7}.alert.error{border-left-color:#dc4b4b;background:#fff0f0}.time{font-size:11px;color:#667085;margin-top:4px}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:11px;border-bottom:1px solid #e8edf2;font-size:13px}th{color:#667085}
+.demo{display:flex;flex-wrap:wrap;gap:9px}.smallnote{font-size:12px;color:#667085;line-height:1.5}
+footer{text-align:center;color:#667085;padding:20px;font-size:12px}
+@media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}.main{grid-template-columns:1fr}}
+@media(max-width:650px){.grid,.formrow,.controls{grid-template-columns:1fr}.header{flex-direction:column;text-align:center}.container{padding:14px}}
+</style>
+</head>
+<body>
+<header class="header">
+<div><h1>⚙ Smart Powerloom Automation</h1><p>IoT Based Intelligent Powerloom Monitoring & Control System</p></div>
+<div class="conn"><span class="dot" id="connDot"></span><span id="connText">Simulation Mode</span></div>
+</header>
+
+<div class="container">
+<h2 class="section">Machine Status</h2>
+<div class="card">
+<div class="status" id="machinePanel">
+<div class="icon" id="machineIcon">⚙️</div>
+<h2 id="machineState">STOPPED</h2>
+<p id="machineMessage">Machine is ready</p>
+</div>
+<div class="controls">
+<button class="start" onclick="startMachine()">▶ START</button>
+<button class="stop" onclick="operatorStop()">■ STOP</button>
+<button class="resume" onclick="resumeMachine()">↻ RESUME</button>
+<button class="pick" id="pickBtn">⏩ PICK (HOLD)</button>
+<button class="danger" onclick="emergencyStop()">⚠ EMERGENCY STOP</button>
+<button class="gray" onclick="resetSystem()">RESET</button>
+</div>
+</div>
+
+<h2 class="section">Live Parameters</h2>
+<div class="grid">
+<div class="card"><div class="title">Machine Speed</div><div class="value"><span id="rpm">0</span> <span class="unit">RPM</span></div></div>
+<div class="card"><div class="title">Production Length</div><div class="value"><span id="production">0.00</span> <span class="unit">m</span></div></div>
+<div class="card"><div class="title">Target Length</div><div class="value"><span id="target">7.00</span> <span class="unit">m</span></div></div>
+<div class="card"><div class="title">Current Colour</div><div class="value" id="colour">PINK</div></div>
+</div>
+
+<h2 class="section">Weft Yarn Monitoring</h2>
+<div class="grid">
+<div class="card"><div class="title">Yarn Used</div><div class="value"><span id="yarnUsed">0.0</span>%</div><div style="margin-top:14px" class="progress"><div class="bar" id="yarnBar"></div></div><p id="yarnStatus" class="smallnote">Normal</p></div>
+<div class="card"><div class="title">Remaining Yarn</div><div class="value"><span id="yarnRemain">100.0</span>%</div><p class="smallnote">Predictive stop threshold: <b>95% used</b></p></div>
+<div class="card"><div class="title">Thread Status</div><div class="value" id="threadStatus">OK</div><p id="threadMessage" class="smallnote">IR thread sensor normal</p></div>
+<div class="card"><div class="title">Buzzer</div><div class="value" id="buzzer">OFF</div><p class="smallnote">Fault / warning indicator</p></div>
+</div>
+
+<h2 class="section">Colour & Cloth Length Control</h2>
+<div class="main">
+<div class="card">
+<h3>Production Settings</h3><br>
+<div class="formrow">
+<div><label>Colour</label><select id="colourSelect"><option>PINK</option><option>BLUE</option><option>GREEN</option><option>YELLOW</option><option>RED</option><option>WHITE</option></select></div>
+<div><label>Target Length (m)</label><input id="lengthInput" type="number" min="0.1" max="9999" step="0.01" value="7"></div>
+</div>
+<br><button class="resume" style="width:100%" onclick="setBatch()">SET COLOUR & LENGTH</button>
+<br><br>
+<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:7px"><span>Batch Progress</span><b><span id="progressText">0.0</span>%</b></div>
+<div class="progress"><div class="bar" id="productionBar"></div></div>
+</div>
+
+<div class="card">
+<h3>Length Keypad</h3><br>
+<div class="keydisplay" id="keyDisplay">0</div>
+<div class="keypad">
+<button onclick="keyPress('1')">1</button><button onclick="keyPress('2')">2</button><button onclick="keyPress('3')">3</button>
+<button onclick="keyPress('4')">4</button><button onclick="keyPress('5')">5</button><button onclick="keyPress('6')">6</button>
+<button onclick="keyPress('7')">7</button><button onclick="keyPress('8')">8</button><button onclick="keyPress('9')">9</button>
+<button onclick="keyPress('.')">.</button><button onclick="keyPress('0')">0</button><button class="clear" onclick="clearKeypad()">C</button>
+<button class="enter" onclick="enterLength()">ENTER LENGTH</button>
+</div>
+</div>
+</div>
+
+<h2 class="section">Hardware Status</h2>
+<div class="card">
+<div class="ind"><span><i class="light" id="relayLight"></i>Relay / Contactor</span><b id="relay">OFF</b></div>
+<div class="ind"><span><i class="light"></i>STM32F103C8T6</span><b>CONNECTED</b></div>
+<div class="ind"><span><i class="light"></i>ESP32 Wi-Fi</span><b id="esp">SIMULATION</b></div>
+<div class="ind"><span><i class="light"></i>GSM Module</span><b id="gsm">READY</b></div>
+<div class="ind"><span><i class="light"></i>IR Thread Sensor</span><b>ACTIVE</b></div>
+<div class="ind"><span><i class="light"></i>Proximity / RPM Sensor</span><b>ACTIVE</b></div>
+</div>
+
+<h2 class="section">Idle Monitoring</h2>
+<div class="grid">
+<div class="card"><div class="title">Unexpected Idle Time</div><div class="value"><span id="idle">0:00</span></div><p id="idleStatus" class="smallnote">No unexpected idle</p></div>
+<div class="card"><div class="title">GSM Threshold</div><div class="value">15 <span class="unit">min</span></div><p class="smallnote">Alert occurs once after 15 minutes of unexpected idle</p></div>
+<div class="card"><div class="title">Last GSM Alert</div><div class="value" style="font-size:18px" id="lastAlert">No Alert</div></div>
+<div class="card"><div class="title">Stop Reason</div><div class="value" style="font-size:19px" id="stopReason">NONE</div></div>
+</div>
+
+<h2 class="section">Production Summary</h2>
+<div class="grid">
+<div class="card"><div class="title">Total Production</div><div class="value"><span id="totalProduction">0.00</span> <span class="unit">m</span></div></div>
+<div class="card"><div class="title">Completed Batches</div><div class="value" id="batches">0</div></div>
+<div class="card"><div class="title">Thread Faults</div><div class="value" id="faults">0</div></div>
+<div class="card"><div class="title">Idle Alerts</div><div class="value" id="idleAlerts">0</div></div>
+</div>
+
+<h2 class="section">Alert & Event Log</h2>
+<div class="card" id="log"><div class="alert"><b>System Ready</b><div>Dashboard initialized successfully.</div><div class="time">Now</div></div></div>
+
+<h2 class="section">Production History</h2>
+<div class="card"><table><thead><tr><th>Time</th><th>Colour</th><th>Target</th><th>Produced</th><th>Status</th></tr></thead><tbody id="history"></tbody></table></div>
+
+<h2 class="section">Project Test Panel</h2>
+<div class="card">
+<p class="smallnote">Demo controls simulate hardware events. They are included so you can test every feature before connecting STM32/ESP32.</p>
+<div class="demo">
+<button class="warn" onclick="testThreadBreak()">TEST THREAD BREAK</button>
+<button class="start" onclick="restoreThread()">RESTORE THREAD</button>
+<button class="warn" onclick="testYarn95()">TEST YARN 95%</button>
+<button class="warn" onclick="testIdle()">TEST 15-MIN IDLE</button>
+<button class="resume" onclick="testTarget()">TEST TARGET REACHED</button>
+<button class="gray" onclick="clearLog()">CLEAR LOG</button>
+</div>
+</div>
+</div>
+<footer>Smart Powerloom Automation | STM32F103C8T6 + ESP32 + GSM</footer>
+
+<script>
+"use strict";
+
+/* ---------- State ---------- */
+const S={
+  running:false, emergency:false, stopReason:"NONE",
+  production:0, target:7, colour:"PINK",
+  yarnUsed:0, threadOK:true, buzzer:false,
+  idleSeconds:0, idleAlertSent:false,
+  totalProduction:0, batches:0, faults:0, idleAlerts:0,
+  pickPosition:0, batchActive:false, keypad:"",
+  lastTick:Date.now()
+};
+
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+function now(){return new Date().toLocaleTimeString();}
+
+function log(msg,type="ok"){
+  const d=document.createElement("div");
+  d.className="alert "+(type==="warning"?"warning":type==="error"?"error":"");
+  d.innerHTML="<b>"+escapeHTML(msg)+"</b><div class='time'>"+now()+"</div>";
+  $("log").prepend(d);
+}
+
+function escapeHTML(x){
+  return String(x).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+}
+
+/* ---------- UI ---------- */
+function render(){
+  let state,msg,cls,icon;
+  if(S.emergency){state="EMERGENCY STOP";msg="Emergency switch is active";cls="stopbg";icon="🛑";}
+  else if(S.running){state="RUNNING";msg="Powerloom is operating normally";cls="";icon="⚙️";}
+  else if(S.stopReason==="YARN_95"){state="STOPPED";msg="95% yarn used — replace/join yarn";cls="warnbg";icon="🧵";}
+  else if(S.stopReason==="THREAD_BREAK"){state="STOPPED";msg="Weft thread break detected";cls="stopbg";icon="🧵";}
+  else if(S.stopReason==="TARGET_REACHED"){state="TARGET COMPLETE";msg="Required cloth length reached";cls="";icon="✅";}
+  else if(S.stopReason==="EMERGENCY"){state="EMERGENCY STOP";msg="Emergency switch is active";cls="stopbg";icon="🛑";}
+  else {state="STOPPED";msg="Machine is ready";cls="stopbg";icon="⏹️";}
+
+  $("machineState").textContent=state;
+  $("machineMessage").textContent=msg;
+  $("machinePanel").className="status "+cls;
+  $("machineIcon").textContent=icon;
+
+  $("rpm").textContent=S.running?Math.round(820+Math.random()*80):0;
+  $("production").textContent=S.production.toFixed(2);
+  $("target").textContent=S.target.toFixed(2);
+  $("colour").textContent=S.colour;
+  $("yarnUsed").textContent=S.yarnUsed.toFixed(1);
+  $("yarnRemain").textContent=(100-S.yarnUsed).toFixed(1);
+  $("threadStatus").textContent=S.threadOK?"OK":"BREAK";
+  $("threadStatus").style.color=S.threadOK?"":"#dc4b4b";
+  $("threadMessage").textContent=S.threadOK?"IR thread sensor normal":"Repair/join thread before resuming";
+  $("buzzer").textContent=S.buzzer?"ON":"OFF";
+  $("relay").textContent=S.running?"ON":"OFF";
+  $("relayLight").className="light "+(S.running?"":"red");
+  $("stopReason").textContent=S.stopReason;
+  $("totalProduction").textContent=S.totalProduction.toFixed(2);
+  $("batches").textContent=S.batches;
+  $("faults").textContent=S.faults;
+  $("idleAlerts").textContent=S.idleAlerts;
+  $("idle").textContent=formatTime(S.idleSeconds);
+
+  let p=S.target>0?clamp(S.production/S.target*100,0,100):0;
+  $("productionBar").style.width=p+"%";
+  $("progressText").textContent=p.toFixed(1);
+
+  $("yarnBar").style.width=S.yarnUsed+"%";
+  $("yarnBar").className="bar "+(S.yarnUsed>=95?"dangerbar":S.yarnUsed>=80?"warnbar":"");
+  $("yarnStatus").textContent=S.yarnUsed>=95?"95% USED — Replace/join yarn":S.yarnUsed>=80?"Warning — yarn getting low":"Normal";
+
+  if(S.running){
+    $("idleStatus").textContent="Machine running — idle timer paused";
+  }else if(S.stopReason!=="NONE" && S.stopReason!=="TARGET_REACHED"){
+    $("idleStatus").textContent="Unexpected idle — "+(S.idleSeconds<900?"monitoring":"GSM alert sent");
+  }else{
+    $("idleStatus").textContent="No unexpected idle";
+  }
+}
+
+function formatTime(sec){
+  sec=Math.max(0,Math.floor(sec));
+  const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;
+  return h>0?`${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${m}:${String(s).padStart(2,"0")}`;
+}
+
+/* ---------- Machine controls ---------- */
+function startMachine(){
+  if(S.emergency){log("Cannot start — emergency stop is active","error");return;}
+  if(!S.threadOK){log("Cannot start — thread break must be repaired","error");return;}
+  if(S.yarnUsed>=95){log("Cannot start — yarn threshold reached","error");return;}
+  if(S.production>=S.target){log("Target already reached. Set a new batch.","warning");return;}
+  S.running=true;S.stopReason="NONE";S.buzzer=false;S.idleSeconds=0;S.idleAlertSent=false;
+  log("Machine STARTED");
+  render();
+}
+function operatorStop(){
+  if(!S.running){log("Machine is already stopped","warning");return;}
+  savePick("OPERATOR_STOP");S.running=false;S.stopReason="OPERATOR_STOP";S.buzzer=false;S.idleSeconds=0;S.idleAlertSent=false;
+  log("Machine stopped by operator. Idle alert is disabled for intentional stop.","warning");render();
+}
+function resumeMachine(){
+  if(S.emergency){log("Resume blocked — emergency stop active","error");return;}
+  if(!S.threadOK){log("Resume blocked — thread break not repaired","error");return;}
+  if(S.yarnUsed>=95){log("Resume blocked — yarn threshold reached","error");return;}
+  if(S.production>=S.target){log("Target reached — set a new batch first","warning");return;}
+  S.running=true;S.stopReason="NONE";S.buzzer=false;S.idleSeconds=0;S.idleAlertSent=false;
+  log("Machine RESUMED");
+  render();
+}
+function savePick(reason){S.pickPosition=S.production;}
+function emergencyStop(){
+  S.emergency=true;S.running=false;S.stopReason="EMERGENCY";S.buzzer=true;S.idleSeconds=0;S.idleAlertSent=false;savePick("EMERGENCY");
+  log("EMERGENCY STOP ACTIVATED","error");render();
+}
+function resetSystem(){
+  S.running=false;S.emergency=false;S.stopReason="NONE";S.buzzer=false;S.idleSeconds=0;S.idleAlertSent=false;
+  S.production=0;S.yarnUsed=0;S.threadOK=true;S.pickPosition=0;S.batchActive=false;S.keypad="";
+  $("keyDisplay").textContent="0";
+  log("System reset completed");
+  render();
+}
+
+/* ---------- Pick long press ---------- */
+let pickTimer=null;
+function pickDown(){
+  if(pickTimer)return;
+  pickTimer=setTimeout(()=>{
+    if(S.emergency){log("PICK blocked — emergency stop active","error");return;}
+    if(!S.threadOK){log("PICK blocked — thread break not repaired","error");return;}
+    if(S.yarnUsed>=95){log("PICK blocked — yarn threshold reached","error");return;}
+    S.production=clamp(S.pickPosition,0,S.target);
+    S.running=true;S.stopReason="NONE";S.buzzer=false;S.idleSeconds=0;S.idleAlertSent=false;
+    log("PICK long-press accepted — resumed from "+S.production.toFixed(2)+" m");
+    render();
+  },1000);
+}
+function pickUp(){if(pickTimer){clearTimeout(pickTimer);pickTimer=null;}}
+
+/* ---------- Keypad ---------- */
+function keyPress(k){
+  if(k==="."&&S.keypad.includes("."))return;
+  if(S.keypad.length>=8)return;
+  if(k==="."&&S.keypad==="")S.keypad="0";
+  S.keypad+=k;$("keyDisplay").textContent=S.keypad||"0";
+}
+function clearKeypad(){S.keypad="";$("keyDisplay").textContent="0";}
+function enterLength(){
+  const v=Number(S.keypad);
+  if(!Number.isFinite(v)||v<=0||v>9999){log("Invalid keypad length","error");return;}
+  $("lengthInput").value=v;S.target=v;$("target").textContent=v.toFixed(2);
+  log("Keypad target length set to "+v.toFixed(2)+" m");clearKeypad();render();
+}
+
+/* ---------- Batch ---------- */
+function setBatch(){
+  const v=Number($("lengthInput").value),c=$("colourSelect").value;
+  if(!Number.isFinite(v)||v<=0||v>9999){log("Enter a valid target length","error");return;}
+  S.target=v;S.colour=c;S.production=0;S.pickPosition=0;S.batchActive=true;S.stopReason="NONE";S.buzzer=false;
+  log("New batch configured: "+c+" — "+v.toFixed(2)+" m");
+  render();
+}
+
+/* ---------- Sensors ---------- */
+function threadBreak(){
+  if(!S.running){log("Thread-break test ignored — machine is not running","warning");return;}
+  S.running=false;S.threadOK=false;S.faults++;S.stopReason="THREAD_BREAK";S.buzzer=true;savePick("THREAD_BREAK");
+  log("WEFT THREAD BREAK detected — machine stopped","error");render();
+}
+function restoreThread(){
+  S.threadOK=true;S.buzzer=false;
+  log("Thread replaced/joined — sensor status OK");
+  render();
+}
+function yarnStop(){
+  S.yarnUsed=95;S.running=false;S.stopReason="YARN_95";S.buzzer=true;savePick("YARN_95");
+  log("YARN THRESHOLD REACHED — 95% used. Machine stopped.","warning");render();
+}
+
+/* ---------- Production ---------- */
+function completeBatch(){
+  S.running=false;S.stopReason="TARGET_REACHED";S.buzzer=true;S.batches++;
+  S.totalProduction+=S.target;S.pickPosition=S.target;S.batchActive=false;
+  log("TARGET LENGTH REACHED — machine automatically stopped");
+  const row=document.createElement("tr");
+  row.innerHTML=`<td>${now()}</td><td>${escapeHTML(S.colour)}</td><td>${S.target.toFixed(2)} m</td><td>${S.production.toFixed(2)} m</td><td>COMPLETED</td>`;
+  $("history").prepend(row);
+  render();
+}
+
+/* ---------- Idle monitor ---------- */
+function updateIdle(dt){
+  if(!S.running && S.stopReason!=="NONE" && S.stopReason!=="OPERATOR_STOP" && S.stopReason!=="TARGET_REACHED" && !S.emergency){
+    S.idleSeconds+=dt;
+    if(S.idleSeconds>=900 && !S.idleAlertSent)sendGSM();
+  }else if(S.running||S.stopReason==="NONE"||S.stopReason==="OPERATOR_STOP"||S.stopReason==="TARGET_REACHED"){
+    S.idleSeconds=0;
+  }
+}
+function sendGSM(){
+  S.idleAlertSent=true;S.idleAlerts++;S.buzzer=true;
+  $("gsm").textContent="SMS SENT";$("lastAlert").textContent=now();
+  log("GSM ALERT SENT — unexpected machine idle reached 15 minutes","error");
+}
+
+/* ---------- Demo: accelerate idle ---------- */
+function testIdle(){
+  if(S.running)operatorStop();
+  S.stopReason="THREAD_BREAK";S.threadOK=false;S.idleSeconds=899;S.idleAlertSent=false;S.buzzer=true;
+  log("Demo idle initialized at 14:59 — next timer tick sends GSM alert","warning");render();
+}
+function testThreadBreak(){S.running=true;S.threadOK=true;render();threadBreak();}
+function testYarn95(){yarnStop();}
+function testTarget(){
+  if(!S.batchActive){S.batchActive=true;}
+  S.production=S.target;completeBatch();
+}
+function clearLog(){$("log").innerHTML="";log("Event log cleared");}
+
+/* ---------- Main clock ---------- */
+function tick(){
+  const nowMs=Date.now();
+  const dt=Math.min((nowMs-S.lastTick)/1000,2);
+  S.lastTick=nowMs;
+
+  if(S.running && !S.emergency){
+    const metresPerSecond=0.02; // simulation speed
+    S.production+=metresPerSecond*dt;
+    if(S.production>=S.target){S.production=S.target;completeBatch();}
+    else{
+      // slow simulated yarn consumption; hardware will replace this with sensor data
+      S.yarnUsed=clamp(S.yarnUsed+0.005*dt,0,95);
+      if(S.yarnUsed>=95)yarnStop();
+    }
+  }
+
+  updateIdle(dt);
+  render();
+}
+
+/* ---------- Keyboard ---------- */
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&S.keypad)enterLength();
+  if(e.key==="Escape")clearKeypad();
+});
+
+/* ---------- Pick listeners ---------- */
+const pb=$("pickBtn");
+pb.addEventListener("mousedown",pickDown);pb.addEventListener("mouseup",pickUp);pb.addEventListener("mouseleave",pickUp);
+pb.addEventListener("touchstart",e=>{e.preventDefault();pickDown();},{passive:false});
+pb.addEventListener("touchend",e=>{e.preventDefault();pickUp();},{passive:false});
+
+/* ---------- Initial render ---------- */
+render();
+setInterval(tick,250);
+
+/* ---------- Demo mode marker ---------- */
+$("esp").textContent="SIMULATION";
+$("connText").textContent="Simulation Mode";
+</script>
+</body>
+</html>
